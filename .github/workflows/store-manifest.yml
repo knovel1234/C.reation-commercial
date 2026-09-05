@@ -1,0 +1,22 @@
+name: store-manifest
+# main 의 store-latest.json 이 바뀌면 스토어판 앱이 읽는 자리('store' prerelease 의 자산)로 올린다.
+# 클라우드 루틴(Gmail 로 스토어 게시 확인)이 파일만 커밋하면, 자산 갱신은 이 워크플로가 GITHUB_TOKEN 으로 한다.
+on:
+  push:
+    branches: [main]
+    paths: ['store-latest.json']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Upload store-latest.json to the 'store' prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view store --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || gh release create store --repo "$GITHUB_REPOSITORY" --prerelease --title "스토어 게시 표지판" --notes "스토어판 앱이 새 버전이 스토어에 게시됐는지 판단하는 표지판(store-latest.json). 설치 파일이 아닙니다."
+          gh release upload store store-latest.json --clobber --repo "$GITHUB_REPOSITORY"
+          echo "uploaded: $(cat store-latest.json)"
